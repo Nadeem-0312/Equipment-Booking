@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lab Equipment Booking</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h2 { margin-top: 40px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 40px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    td.booked { background-color: #ffd1d1; }
+    td.available:hover { background-color: #d1ffd1; cursor: pointer; }
+    .hidden { display: none; }
+    #logArea { border: 1px solid #ccc; padding: 10px; margin-top: 20px; background: #f9f9f9; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Lab Equipment Booking - July Week 4</h1>
+  <div id="login">
+    <label for="email">Enter Email: </label>
+    <input type="email" id="email" placeholder="name@iitb.ac.in" />
+    <button onclick="login()">Login</button>
+    <p id="loginError" style="color: red;"></p>
+  </div>
+
+  <div id="bookingApp" class="hidden">
+    <p>Logged in as: <span id="userEmail"></span></p>
+    <button onclick="downloadPDFWithLog()">📄 Download Weekly Report (PDF)</button>
+    <button id="clearBtn" class="hidden" onclick="clearAllBookings()">♻️ Clear All Bookings</button>
+    <div id="equipmentContainers"></div>
+    <p id="bookingMessage" style="color: green;"></p>
+    <h3>Change Log</h3>
+    <div id="logArea"></div>
+  </div>
+
+  <script>
+    const allowedEmails = ["sonali.das@iitb.ac.in", "23d1413@iitb.ac.in", "24d0147@iitb.ac.in", "23d0136@iitb.ac.in", "23d2020@iitb.ac.in", "sb79@iitbbs.ac.in", "gsatyam@iitb.ac.in"];
+    const adminEmails = ["sonali.das@iitb.ac.in", "23d1413@iitb.ac.in"];
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const logEntries = [];
+    let currentUser = null;
+
+    function logAction(action) {
+      const timestamp = new Date().toLocaleString();
+      const entry = `[${timestamp}] ${action}`;
+      logEntries.push(entry);
+      document.getElementById("logArea").textContent = logEntries.join("\n");
+    }
+
+    function login() {
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const isAllowed = allowedEmails.includes(email) || email.endsWith("@iitb.ac.in");
+
+      if (!isAllowed) {
+        document.getElementById("loginError").textContent = "Access denied. Only authorized IITB emails can login.";
+        return;
+      }
+
+      currentUser = email;
+      document.getElementById("login").classList.add("hidden");
+      document.getElementById("bookingApp").classList.remove("hidden");
+      document.getElementById("userEmail").textContent = email;
+
+      if (adminEmails.includes(email)) {
+        document.getElementById("clearBtn").classList.remove("hidden");
+      }
+
+      logAction(`${email} logged in.`);
+      generateBookingTables();
+    }
+
+    function downloadPDFWithLog() {
+      const date = new Date();
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const month = monthNames[date.getMonth()];
+      const week = Math.ceil((date.getDate() - 1 - date.getDay()) / 7) + 1;
+      const filename = `${month}_Week_${week}_Booking_Report.pdf`;
+
+      const content = document.createElement("div");
+      const equipmentHTML = document.getElementById("equipmentContainers").cloneNode(true);
+      const logHTML = document.createElement("pre");
+      logHTML.textContent = logEntries.join("\n");
+
+      const heading = document.createElement("h2");
+      heading.textContent = "Change Log";
+
+      content.appendChild(equipmentHTML);
+      content.appendChild(heading);
+      content.appendChild(logHTML);
+
+      html2pdf().from(content).set({
+        margin: 0.5,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      }).save();
+    }
+
+    function generateBookingTables() {
+      const equipmentSlots = {
+        "Shimadzu GC": ["10.00 AM – 09.00 PM", "10.00 PM – 09.00 AM"],
+        "Tube Furnace": ["10.00 AM – 09.00 PM", "10.00 PM – 09.00 AM"],
+        "Tube Furnace Small": ["10.00 AM – 09.00 PM", "10.00 PM – 09.00 AM"],
+        "Nucon 5700 GC": ["10.00 AM – 09.00 PM", "10.00 PM – 09.00 AM"],
+        "TAP Reactor": ["09.00 AM – 05.00 PM", "05.00 PM – 01.00 AM", "01.00 AM – 09.00 AM"],
+        "Plasma Reactor": ["10.00 AM – 09.00 PM", "10.00 PM – 09.00 AM"],
+        "Stirrer 1": ["10.00 AM - 01.00 PM", "01.00 - 04.00 PM", "04.00 - 07.00 PM", "07.00 - 10.00 PM", "10.00 PM - 01.00 AM", "01.00 - 04.00 AM", "04.00 - 07.00 AM", "07.00 - 10.00 AM"],
+        "Stirrer 2": ["10.00 AM - 01.00 PM", "01.00 - 04.00 PM", "04.00 - 07.00 PM", "07.00 - 10.00 PM", "10.00 PM - 01.00 AM", "01.00 - 04.00 AM", "04.00 - 07.00 AM", "07.00 - 10.00 AM"],
+        "Stirrer 3": ["10.00 AM - 01.00 PM", "01.00 - 04.00 PM", "04.00 - 07.00 PM", "07.00 - 10.00 PM", "10.00 PM - 01.00 AM", "01.00 - 04.00 AM", "04.00 - 07.00 AM", "07.00 - 10.00 AM"],
+        "TPDRO": ["10.00 AM - 02.00 PM", "02.00 - 06.00 PM", "06.00 - 10.00 PM", "10.00 PM - 02.00 AM", "02.00 - 06.00 AM", "06.00 - 10.00 PM"],
+        "Muffle Furnace": ["All Day"],
+        "Autoclave (New)+ Oven (Lab 219)": ["All Day"],
+        "Autoclave  (Old Big and Small) + Vaccum Oven (Central Facility)": ["All Day"],
+        "Oven (Central Facility-223)": ["All Day"]
+      };
+
+      const container = document.getElementById("equipmentContainers");
+      container.innerHTML = "";
+
+      Object.keys(equipmentSlots).forEach(equipment => {
+        const title = document.createElement("h2");
+        title.textContent = equipment;
+        container.appendChild(title);
+
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        headRow.innerHTML = `<th>Time Slot</th>${days.map(day => `<th>${day}</th>`).join("")}`;
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        equipmentSlots[equipment].forEach(slot => {
+          const row = document.createElement("tr");
+          const timeCell = document.createElement("td");
+          timeCell.textContent = slot;
+          row.appendChild(timeCell);
+
+          days.forEach(day => {
+            const cell = document.createElement("td");
+            cell.classList.add("available");
+            cell.setAttribute("data-booked-by", "");
+            cell.addEventListener("click", () => handleBooking(cell));
+            row.appendChild(cell);
+          });
+          tbody.appendChild(row);
+        });
+
+        table.appendChild(tbody);
+        container.appendChild(table);
+      });
+    }
+
+    function handleBooking(cell) {
+      const name = currentUser;
+      const bookedBy = cell.getAttribute("data-booked-by");
+      if (cell.textContent === "") {
+        cell.textContent = name;
+        cell.setAttribute("data-booked-by", name);
+        cell.classList.add("booked");
+        logAction(`${name} booked a slot.`);
+      } else if (bookedBy === name) {
+        if (confirm("Do you want to unbook this slot?")) {
+          cell.textContent = "";
+          cell.setAttribute("data-booked-by", "");
+          cell.classList.remove("booked");
+          logAction(`${name} unbooked a slot.`);
+        }
+      } else {
+        alert("This slot is already booked by someone else.");
+      }
+    }
+
+    function clearAllBookings() {
+      if (!confirm("Are you sure you want to clear all bookings?")) return;
+      document.querySelectorAll("td.booked").forEach(cell => {
+        cell.textContent = "";
+        cell.setAttribute("data-booked-by", "");
+        cell.classList.remove("booked");
+      });
+      logAction(`${currentUser} cleared all bookings.`);
+    }
+  </script>
+</body>
+</html>
